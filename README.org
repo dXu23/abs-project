@@ -1,0 +1,12 @@
+#+TITLE: Antilock Braking System Slideshow for Revature
+
+This is my ABS Slideshow for Revature. To compile the tex file,
+simply type the command
+
+#+begin_src sh
+  pdflatex -shell-escape abs.tex
+#+end_src
+
+It requires LaTeX, gnuplot, and some LaTeX libraries that might
+already be automatically installed if the 'right' distribution
+of LaTeX was installed.
