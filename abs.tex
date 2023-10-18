@@ -1,0 +1,407 @@
+\documentclass{beamer}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{makecell,multirow}
+\usepackage{array}
+\usepackage{varwidth}
+\usepackage{xcolor}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage[siunitx, RPvoltages]{circuitikz}
+\usepackage{pgfplots}
+
+\usetikzlibrary{positioning}
+
+\usepgfplotslibrary{external}
+\tikzexternalize
+
+
+\definecolor{commentsColor}{rgb}{0.497495, 0.497587, 0.497464}
+\definecolor{keywordsColor}{rgb}{0.000000, 0.000000, 0.635294}
+\definecolor{stringColor}{rgb}{0.558215, 0.000000, 0.135316}
+
+\lstset{ %
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}
+  basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{commentsColor}\textit,    % comment style
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=tb,                                % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{keywordsColor}\bfseries,       % keyword style
+  language=c++,                 % the language of the code (can be overrided per snippet)
+  otherkeywords={*,...},           % if you want to add more keywords to the set
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{commentsColor}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=1,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{stringColor}, % string literal style
+  tabsize=2,                       % sets default tabsize to 2 spaces
+  title=\lstname,                  % show the filename of files included with \lstinputlisting; also try caption instead of title
+  columns=fixed                    % Using fixed column width (for e.g. nice alignment)
+}
+
+\def\labelsize{\fontsize{7pt}{8pt}\selectfont}
+
+\title{An ECU Design for an Anti-Lock Braking System}
+\author{Xu, Daniel}
+\institute{Revature}
+\date{October 6, 2023}
+
+\begin{document}
+\frame{\titlepage}
+
+\begin{frame}
+  \frametitle{Intended End Result}
+  The design of an anti-lock braking system (ABS) should prevent the wheels
+  from locking up while braking, allowing the driver to retain tractive
+  contract with the road, as well as control of the car.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Skidding}
+  \begin{itemize}
+  \item The most common reason why vehicles skid is due to tires
+    receiving more force than they're meant to take, leading to the surface of
+    tire sliding across the road
+  \item The most force is usually applied to tires when braking, accelerating, or
+    cornering
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{How our ECU achieves its function}
+  \begin{enumerate}
+  \item
+    Our ECU monitors the speed sensors constantly. It is looking for
+    sudden decelerations in the wheel that are not normal. Right before
+    a wheel locks up, it experiences a rapid deceleration. If not
+    checked, the wheel would suddenly stop faster than any car could.
+
+  \item The ABS ECU decreases pressure to the brake via a valve until it
+    sees an acceleration, and then raises the pressure until it sees a
+    deceleration again. The ECU is capable of doing this before the wheel
+    experiences a significant change in speed.
+
+%   \item Manually pumping the brakes is therefore not needed when driving
+%     on a slippery or low friction surface, allowing the driver to steer
+%     even in the most dire of braking conditions
+%
+%   \item While the ABS is active, the driver will feel a pulsing in the brake
+%     pedal; this is due to the sudden opening and closing of the valves, and
+%     notifies the driver that the ABS is in operation
+%
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Components of an ABS}
+  \begin{itemize}
+  \item \textbf{Wheel Speed Sensor} - The faster a wheel is spinning, the higher
+    the voltage of a wheel speed sensor; this info is sent to the ECU so that
+    the speed and then acceleration can be detected
+  \item \textbf{Valves} - Helps regulate the pressure in a brake, giving it a degree
+    of control over the acceleration. Some valves have three positions:
+    \begin{itemize}
+    \item \textbf{Open} - pressure from master cyclinder is can flow to brake
+    \item \textbf{Blocking} - prevents pressure from master cylinder to getting to brakes
+    \item \textbf{Released} - releases pressure from the brake
+    \end{itemize}
+  \item \textbf{Pump} - Returns pressure to brakes after the valves have released some pressure
+  \item \textbf{ECU} - Microcontroller responsible for coordinating the entire ABS
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Converting Sensor Data into Real Information}
+
+  Let \(V\) be voltage and \(s\) be speed. According to \cite{ws24}, the Bendix
+  WS-24 antilock wheel lock speed sensor produces a voltage of 0.350 VAC
+  at a minimum of 100 Hz (about 7 mph) at a gap of 0.28 inches. So for every
+  7 mph increase in speed, the wheel speed sensor should produce 0.350 higher
+  volts. 7 mph is 3.12928 m/s, so for a given voltage produced by the speed sensor,
+  the speed of a wheel can be calculated as so:
+
+  \[\frac{8.9408 \, \textrm{m / s}}{1 \, \textrm{VAC}} \cdot V = s \]
+\end{frame}
+
+\begin{frame}
+  \frametitle{Wheel Speed Sensor}
+  \begin{tikzpicture}[domain=0:6]
+    \begin{axis}[
+        title = {Voltage vs Vehicle Speed},
+        axis lines = left,
+        xlabel = {Voltage (VAC)},
+        ylabel = {Speed (m/s)}
+      ]
+      \addplot[
+        color=red,
+        domain=0:6,
+        samples=100
+      ]{8.9408 * x};
+    \end{axis}
+
+  \end{tikzpicture}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Circuit Diagram}
+  \begin{circuitikz}[american]
+    \draw (8, 0) node[dipchip, hide numbers, font=\scriptsize, num pins=16, external pins width=0](E){ECM};
+    \node [left, font=\tiny] at (E.bpin 16) {S0};
+    \node [left, font=\tiny] at (E.bpin 15) {S1};
+    \node [left, font=\tiny] at (E.bpin 14) {S2};
+    \node [left, font=\tiny] at (E.bpin 13) {S3};
+
+    \node [left, font=\tiny] at (E.bpin 12) {M0};
+    \node [left, font=\tiny] at (E.bpin 11) {M1};
+    \node [left, font=\tiny] at (E.bpin 10) {M2};
+    \node [left, font=\tiny] at (E.bpin 9) {M3};
+
+    \node[rectangle, font=\scriptsize, align=center, draw=black] (dash) at (5, -1.96) { Dashboard };
+
+    \node[rectangle, font=\tiny, align=center, text width=0.8cm, draw=black] (fls) at (10, 3) {
+      Front Left
+      Sensor
+    };
+
+    \node[rectangle, font=\tiny, align=center, text width=0.8cm, draw=black] (frs) at (11.3, 3) {
+      Front Right
+      Sensor
+    };
+
+    \node[rectangle, font=\tiny, align=center, text width=0.8cm, draw=black] (bls) at (12.6, 3) {
+      \labelsize
+      Back Left
+      Sensor
+    };
+
+    \node[rectangle, font=\tiny, align=center, text width=0.8cm, draw=black] (brs) at (13.9, 3) {
+      \labelsize
+      Back Right
+      Sensor
+    };
+
+    \node[rectangle, font=\tiny, align=center, text width=0.8cm, draw=black] (flm) at (10, -3) {
+      Front Left
+      Modulator Valve
+    };
+
+    \node[rectangle, font=\tiny, align=center, text width=0.8cm, draw=black] (frm) at (11.3, -3) {
+      Front Right
+      Modulator Valve
+    };
+
+    \node[rectangle, font=\tiny, align=center, text width=0.8cm, draw=black] (blm) at (12.6, -3) {
+      \labelsize
+      Back Left
+      Modulator Valve
+    };
+
+    \node[rectangle, font=\tiny, align=center, text width=0.8cm, draw=black] (brm) at (13.9, -3) {
+      \labelsize
+      Back Right
+      Modulator Valve
+    };
+
+    \draw (fls.north) -- ++ (0, 0.02) node[ground,rotate=180]{};
+    \draw (frs.north) -- ++ (0, 0.02) node[ground,rotate=180]{};
+    \draw (bls.north) -- ++ (0, 0.02) node[ground,rotate=180]{};
+    \draw (brs.north) -- ++ (0, 0.02) node[ground,rotate=180]{};
+
+    \draw (flm.south) -- ++ (0, -0.02) node[ground]{};
+    \draw (frm.south) -- ++ (0, -0.02) node[ground]{};
+    \draw (blm.south) -- ++ (0, -0.02) node[ground]{};
+    \draw (brm.south) -- ++ (0, -0.02) node[ground]{};
+
+
+    \draw (E.bpin 1) -- ++ (-0.8, 0) to[normal open switch, mirror, n=Swp, font=\tiny, l_=Ignition Switch] ++
+    (-0.8, 0) to[battery, invert, font=\tiny, l_=12V] ++ (-2, 0) node[ground]{};
+
+    \draw (E.bpin 16) -- ++ (1.16, 0) -- (fls.south);
+    \draw (E.bpin 15) -- ++ (2.46, 0) -- (frs.south);
+    \draw (E.bpin 14) -- ++ (3.76, 0) -- (bls.south);
+    \draw (E.bpin 13) -- ++ (5.06, 0) -- (brs.south);
+
+    \draw (E.bpin 12) -- ++ (1.16, 0) -- (flm.north);
+    \draw (E.bpin 11) -- ++ (2.46, 0) -- (frm.north);
+    \draw (E.bpin 10) -- ++ (3.76, 0) -- (blm.north);
+    \draw (E.bpin 9) -- ++ (5.06, 0) -- (brm.north);
+
+    \draw (E.bpin 8) -- (dash.east);
+
+    \node[font=\tiny] at (6.5, 1.6) { KL15 };
+
+  \end{circuitikz}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Potential DTC Codes involving an ABS}
+  \begin{description}
+    \item[U0121] Lost Communication with ABS Control Module
+    \item[P0863] TCM Communication Circuit
+    \item[P0883] TCM Power Input Signal High
+    \item[P0864] TCM Communication Circuit Range/Performance
+    \item[P215A] Vehicle Speed - Wheel Speed Correlation
+  \end{description}
+
+\end{frame}
+\begin{frame}[fragile]
+  \frametitle{Pseudocode (1 of 4)}
+  \begin{lstlisting}[language=c++, basicstyle=\tiny, columns=fullflexible]
+    enum abs_status { ABS_NORMAL, ABS_DECEL, ABS_ACCEL };
+
+    typedef enum abs_status AbsStatus;
+
+    // speed should be in m/s and time should be in s
+    struct wheel_sensor {
+      int pin;
+      double prev_speed;
+      double prev_time;
+      double curr_speed;
+      double curr_time;
+      AbsStatus status;
+    };
+
+    typedef struct wheel_sensor WheelSensor;
+
+    void ws_init(WheelSensor *ws, int pin) {
+      ws->pin = pin;
+      ws->prev_speed = 0.0, ws->curr_speed = 0.0;
+      ws->prev_time = 0.0, ws->curr_time = 0.0;
+      ws->status = ABS_NORMAL;
+    }
+
+    \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Pseudocode (2 of 4)}
+  \begin{lstlisting}[language=c++, basicstyle=\tiny, columns=fullflexible]
+    #define VOLTS_TO_METERS_PERS_SECOND_CONV_CONST 8.9408
+
+    static inline double ws_voltage_to_meters_per_second(double volts) {
+      return VOLTS_TO_METERS_PERS_SECOND_CONV_CONST  * volts;
+    }
+
+    static inline double millis_to_seconds(double mil) {
+      return mil / 1000.0;
+    }
+
+    void ws_status_update(WheelSensor *ws) {
+      double accel = ws_acceleration(ws);
+
+      if (ws->status == ABS_NORMAL) {
+        if (accel < WS_DECEL_THRESHOLD) {
+          ws->status = WS_DECEL;
+        }
+      } else if (ws->status == ABS_DECEL) {
+        if (accel > 0.0) {
+          ws->status = WS_ACCEL;
+        }
+      } else { // currently accelerating, want to decelerate until normal
+        if (accel < 0.0) {
+          ws->status = WS_NORMAL;
+        }
+      }
+    }
+
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Pseudocode (3 of 4)}
+  \begin{lstlisting}[language=c++, basicstyle=\tiny, columns=fullflexible]
+    void ws_update(WheelSensor *ws) {
+      ws->prev_speed = ws->curr_speed;
+      ws->prev_time = ws->curr_time;
+
+      ws->curr_speed = ws_voltage_to_meters_per_second(AnalogRead(ws->pin));
+      ws->curr_time = millis_to_seconds((double) millis());
+
+      ws_status_update(ws);
+    }
+
+
+    inline double ws_acceleration(WheelSensor *ws) {
+      return (ws->curr_speed - ws->prev_speed) / (ws->curr_time - ws->prev_time);
+    }
+
+    WheelSensor fl_ws, fr_ws, bl_ws, br_ws;
+
+    void ABS_setup() {
+      ws_init(&fl_ws, FRONT_LEFT_WS_PIN);
+      ws_init(&fr_ws, FRONT_RIGHT_WS_PIN);
+      ws_init(&bl_ws, BACK_LEFT_WS_PIN);
+      ws_init(br_ws, BACK_RIGHT_WS_PIN);
+    }
+
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Pseudocode (4 of 4)}
+    \begin{lstlisting}[language=c++, basicstyle=\tiny, columns=fullflexible]
+
+    void ABS_loop() {
+      if (fl_ws.status == ABS_DECEL) {
+        valve_set_position(FRONT_LEFT_VAVLE_PIN, VALVE_RELEASE);
+      } else if (fl_ws.status == ABS_ACCEL) {
+        valve_set_position(FRONT_LEFT_VALVE_PIN, VALVE_OPEN);
+      }
+
+      if (fl_ws.status == ABS_DECEL) {
+        valve_set_position(FRONT_RIGHT_VALVE_PIN, VALVE_RELEASE);
+      } else if (fl_ws.status == ABS_ACCEL) {
+        valve_set_position(FRONT_RIGHT_VALVE_PIN, VALVE_OPEN);
+      }
+
+      if (fl_ws.status == ABS_DECEL) {
+        valve_set_position(BACK_LEFT_VALVE_PIN, VALVE_RELEASE);
+      } else if (fl_ws.status == ABS_ACCEL) {
+        valve_set_position(BACK_LEFT_VALVE_PIN, VALVE_OPEN);
+      }
+
+      if (fl_ws.status == ABS_DECEL) {
+        valve_set_position(BACK_RIGHT_VALVE_PIN, VALVE_RELEASE);
+      } else if (fl_ws.status == ABS_ACCEL) {
+        valve_set_position(BACK_RIGHT_VALVE_PIN, VALVE_OPEN);
+      }
+
+      ws_update(&fl_ws);
+      ws_update(&fr_ws);
+      ws_update(&bl_ws);
+      ws_update(&br_ws);
+    }
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}
+  \frametitle{References}
+  \begin{thebibliography}{9}
+    \setbeamertemplate{bibliography item}[online]
+  \bibitem{howstuffworks}
+    Nice, Karim. ``How Anti-Lock Brakes Work.'' HowStuffWorks, August 23, 2000.
+    \url{https://auto.howstuffworks.com/auto-parts/brakes/brake-types/anti-lock-brake.htm}.
+    \setbeamertemplate{bibliography item}[online]
+    \bibitem{ws24}
+    ``Bendix WS-24 Antilock Wheel Speed Sensor.'' Bendix, April 2019.
+      \url{https://static.nhtsa.gov/odi/tsbs/2019/MC-10163232-9999.pdf}.
+
+    \bibitem{ec80}
+      ``Bendix EC-80 ABS/ATC Electronic Controllers.'' Bendix, April 2019.
+      \url{https://static.nhtsa.gov/odi/tsbs/2022/MC-10208811-0001.pdf}
+  \end{thebibliography}
+\end{frame}
+
+\end{document}
