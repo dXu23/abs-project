@@ -1,0 +1,34 @@
+\frametitle{Pseudocode (4 of 4)}
+    \begin{lstlisting}[language=c++, basicstyle=\tiny, columns=fullflexible]
+
+    void ABS_loop() {
+      if (fl_ws.status == ABS_DECEL) {
+        valve_set_position(FRONT_LEFT_VAVLE_PIN, VALVE_RELEASE);
+      } else if (fl_ws.status == ABS_ACCEL) {
+        valve_set_position(FRONT_LEFT_VALVE_PIN, VALVE_OPEN);
+      }
+
+      if (fl_ws.status == ABS_DECEL) {
+        valve_set_position(FRONT_RIGHT_VALVE_PIN, VALVE_RELEASE);
+      } else if (fl_ws.status == ABS_ACCEL) {
+        valve_set_position(FRONT_RIGHT_VALVE_PIN, VALVE_OPEN);
+      }
+
+      if (fl_ws.status == ABS_DECEL) {
+        valve_set_position(BACK_LEFT_VALVE_PIN, VALVE_RELEASE);
+      } else if (fl_ws.status == ABS_ACCEL) {
+        valve_set_position(BACK_LEFT_VALVE_PIN, VALVE_OPEN);
+      }
+
+      if (fl_ws.status == ABS_DECEL) {
+        valve_set_position(BACK_RIGHT_VALVE_PIN, VALVE_RELEASE);
+      } else if (fl_ws.status == ABS_ACCEL) {
+        valve_set_position(BACK_RIGHT_VALVE_PIN, VALVE_OPEN);
+      }
+
+      ws_update(&fl_ws);
+      ws_update(&fr_ws);
+      ws_update(&bl_ws);
+      ws_update(&br_ws);
+    }
+  \end{lstlisting}
